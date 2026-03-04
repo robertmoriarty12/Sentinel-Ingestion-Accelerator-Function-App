@@ -1,0 +1,93 @@
+{
+    "id": "FunctionAppSample",
+    "title": "Function App Sample (Ingestion API)",
+    "publisher": "Microsoft",
+    "descriptionMarkdown": "The **Function App Sample** data connector demonstrates how to ingest custom JSON events into a Microsoft Sentinel custom table using an Azure Function and the [Azure Monitor Ingestion API](https://learn.microsoft.com/azure/azure-monitor/logs/logs-ingestion-api-overview) (DCE/DCR). Use this as a starting template for building your own Azure Function–based connectors.",
+    "graphQueries": [
+        {
+            "metricName": "FunctionApp Sample events",
+            "legend": "FunctionAppSample_CL",
+            "baseQuery": "FunctionAppSample_CL"
+        }
+    ],
+    "sampleQueries": [
+        {
+            "description": "All FunctionApp Sample events",
+            "query": "FunctionAppSample_CL\n| sort by TimeGenerated desc"
+        },
+        {
+            "description": "FunctionApp Sample – alerts only",
+            "query": "FunctionAppSample_CL\n| where EventType == \"Alert\"\n| sort by TimeGenerated desc"
+        }
+    ],
+    "dataTypes": [
+        {
+            "name": "FunctionAppSample_CL",
+            "lastDataReceivedQuery": "FunctionAppSample_CL\n            | summarize Time = max(TimeGenerated)\n            | where isnotempty(Time)"
+        }
+    ],
+    "connectivityCriterias": [
+        {
+            "type": "IsConnectedQuery",
+            "value": [
+                "FunctionAppSample_CL\n            | summarize LastLogReceived = max(TimeGenerated)\n            | project IsConnected = LastLogReceived > ago(1d)"
+            ]
+        }
+    ],
+    "availability": {
+        "status": 1,
+        "isPreview": true
+    },
+    "permissions": {
+        "resourceProvider": [
+            {
+                "provider": "Microsoft.OperationalInsights/workspaces",
+                "permissionsDisplayText": "Read and write permissions on the workspace are required.",
+                "providerDisplayName": "Workspace",
+                "scope": "Workspace",
+                "requiredPermissions": {
+                    "write": true,
+                    "read": true,
+                    "delete": true
+                }
+            }
+        ],
+        "customs": [
+            {
+                "name": "Microsoft.Web/sites permissions",
+                "description": "Read and write permissions to Azure Functions to create a Function App is required. [See the documentation to learn more about Azure Functions](https://docs.microsoft.com/azure/azure-functions/)."
+            },
+            {
+                "name": "Azure AD App Registration",
+                "description": "An Azure AD App Registration (service principal) is required. The ARM template will automatically assign the **Monitoring Metrics Publisher** role on the Data Collection Rule (DCR) to the App Registration using its Object ID. [Learn more about registering an application](https://learn.microsoft.com/azure/active-directory/develop/quickstart-register-app)."
+            }
+        ]
+    },
+    "instructionSteps": [
+        {
+            "title": "",
+            "description": ">**NOTE:** This connector uses Azure Functions and the Azure Monitor Ingestion API (DCE/DCR) to push sample events into Microsoft Sentinel. The ARM template automatically creates the Data Collection Endpoint, custom log table (`FunctionAppSample_CL`), Data Collection Rule, and role assignment — no manual Azure Monitor configuration is required. This might result in additional data ingestion costs. Check the [Azure Functions pricing page](https://azure.microsoft.com/pricing/details/functions/) and [Azure Monitor pricing page](https://azure.microsoft.com/pricing/details/monitor/) for details."
+        },
+        {
+            "title": "",
+            "description": ">**(Optional Step)** Securely store your App Registration credentials in Azure Key Vault. [Follow these instructions](https://docs.microsoft.com/azure/app-service/app-service-key-vault-references) to use Azure Key Vault references with an Azure Function App."
+        },
+        {
+            "title": "STEP 1 – Create an Azure AD App Registration",
+            "description": "1. In the [Azure Portal](https://portal.azure.com), navigate to **Azure Active Directory > App registrations > New registration**.\n2. Provide a name (e.g. `FunctionApp-Sentinel-Connector`) and register.\n3. Under **Certificates & secrets**, create a new client secret. Note the **Tenant ID**, **Client ID**, and **Client Secret**.\n4. On the **Overview** page, also note the **Object ID** — this is required by the ARM template to assign the Monitoring Metrics Publisher role on the Data Collection Rule."
+        },
+        {
+            "title": "STEP 2 – Deploy the Azure Function App",
+            "description": "Click **Deploy to Azure** and fill in the parameters. The template will automatically create the Data Collection Endpoint, `FunctionAppSample_CL` table, Data Collection Rule, role assignment, and Function App.\n\n[![Deploy To Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Frobertmoriarty12%2FAzure-Sentinel%2Fmaster%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json)\n\n**Parameters to fill in:**\n\n| Parameter | Description |\n|---|---|\n| `WorkspaceName` | Name of your Log Analytics / Sentinel workspace |\n| `TenantId` | Azure AD Tenant ID from Step 1 |\n| `ClientId` | App Registration Client ID from Step 1 |\n| `ClientSecret` | App Registration Client Secret from Step 1 |\n| `AzureClientObjectId` | App Registration **Object ID** from Step 1 |\n| `AppInsightsWorkspaceResourceID` | Full Resource ID of the Log Analytics workspace (from **Log Analytics workspace > Properties**) |",
+            "instructions": [
+                {
+                    "parameters": {
+                        "fillWith": ["WorkspaceId"],
+                        "label": "Workspace ID"
+                    },
+                    "type": "CopyableLabel"
+                }
+            ]
+        }
+    ]
+}
