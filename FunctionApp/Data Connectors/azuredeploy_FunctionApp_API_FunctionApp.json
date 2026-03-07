@@ -307,12 +307,12 @@
                 {
                     "type": "Microsoft.Authorization/roleAssignments",
                     "apiVersion": "2022-04-01",
-                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e0')]",
+                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e6')]",
                     "dependsOn": [
                         "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]"
                     ],
                     "properties": {
-                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e0')]",
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
                         "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('FunctionName')), '2022-03-01', 'full').identity.principalId]",
                         "principalType": "ServicePrincipal"
                     }
