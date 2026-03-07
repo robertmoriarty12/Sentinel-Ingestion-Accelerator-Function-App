@@ -277,7 +277,7 @@
                         "DCE_ENDPOINT": "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('endpointName'))).logsIngestion.endpoint]",
                         "DCR_ID": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', variables('mainRuleName'))).immutableId]",
                         "STREAM_NAME": "[variables('streamName')]",
-                        "WEBSITE_RUN_FROM_PACKAGE": "https://raw.githubusercontent.com/robertmoriarty12/Sentinel-Ingestion-Accelerator-Function-App/main/Data%20Connectors/FunctionAppSample.zip"
+                        "WEBSITE_RUN_FROM_PACKAGE": "https://raw.githubusercontent.com/robertmoriarty12/Sentinel-Ingestion-Accelerator-Function-App/main/FunctionApp/Data%20Connectors/FunctionAppSample.zip"
                     }
                 }
             ]
