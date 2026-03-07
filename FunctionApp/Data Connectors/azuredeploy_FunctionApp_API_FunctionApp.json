@@ -316,7 +316,7 @@
                 "[resourceId('Microsoft.Web/sites', variables('FunctionName'))]"
             ],
             "properties": {
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e0')]",
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/4633458b-17de-408a-b874-0445c86b69e0')]",
                 "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('FunctionName')), '2022-03-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
             }
