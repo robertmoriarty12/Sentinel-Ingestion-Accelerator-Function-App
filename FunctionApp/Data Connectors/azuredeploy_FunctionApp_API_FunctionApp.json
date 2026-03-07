@@ -287,13 +287,31 @@
             "apiVersion": "2022-07-01",
             "name": "[variables('KeyVaultName')]",
             "location": "[parameters('FunctionAppLocation')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('FunctionName'))]"
+            ],
             "properties": {
                 "sku": { "family": "A", "name": "standard" },
                 "tenantId": "[subscription().tenantId]",
                 "enableRbacAuthorization": true,
                 "enableSoftDelete": true,
                 "softDeleteRetentionInDays": 7
-            }
+            },
+            "resources": [
+                {
+                    "type": "Microsoft.Authorization/roleAssignments",
+                    "apiVersion": "2022-04-01",
+                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e0')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]"
+                    ],
+                    "properties": {
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e0')]",
+                        "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('FunctionName')), '2022-03-01', 'full').identity.principalId]",
+                        "principalType": "ServicePrincipal"
+                    }
+                }
+            ]
         },
         {
             "type": "Microsoft.KeyVault/vaults/secrets",
@@ -304,21 +322,6 @@
             ],
             "properties": {
                 "value": "[parameters('ClientSecret')]"
-            }
-        },
-        {
-            "type": "Microsoft.Authorization/roleAssignments",
-            "apiVersion": "2022-04-01",
-            "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e0')]",
-            "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]",
-            "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]",
-                "[resourceId('Microsoft.Web/sites', variables('FunctionName'))]"
-            ],
-            "properties": {
-                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/4633458b-17de-408a-b874-0445c86b69e0')]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('FunctionName')), '2022-03-01', 'full').identity.principalId]",
-                "principalType": "ServicePrincipal"
             }
         },
         {
