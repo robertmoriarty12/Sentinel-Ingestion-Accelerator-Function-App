@@ -179,11 +179,31 @@ The Function App runs automatically on a timer every 10 minutes. To verify data 
 
 In the Azure Portal, go to your **Function App → Functions**. You should see `AzureFunctionFunctionApp` listed.
 
-#### Manually trigger the function (optional)
+#### Manually test the function via Code + Test
 
-1. Function App → **Functions** → `AzureFunctionFunctionApp`
-2. Click **Test/Run → Run**
-3. Watch the **Logs** tab — look for `Successfully ingested N event(s)`
+Before triggering, enable CORS so the portal's log stream can connect:
+
+1. In your **Function App**, go to **Settings → CORS**
+2. Add `https://portal.azure.com` to the allowed origins list and click **Save**
+
+Then trigger the function:
+
+1. Function App main page → **Functions** → click `AzureFunctionFunctionApp`
+2. Click **Code + Test** in the left menu
+3. Click **Test/Run** in the toolbar
+4. At the bottom of the panel, wait for the live log stream to report **Connected** — this uses Application Insights and may take 10–20 seconds
+5. Leave **HTTP method** as `POST` and **Selected key** as `_master` (the default host key)
+6. Click **Run**
+
+You should receive **HTTP 202 Accepted** in the Output pane. The live log stream at the bottom should show:
+
+```
+[Information]   FunctionAppSample main: Successfully ingested 3 event(s) into stream 'Custom-FunctionAppSample_CL'.
+[Information]   FunctionAppSample main: Connector finished at <timestamp>Z
+[Information]   Executed 'Functions.AzureFunctionFunctionApp' (Succeeded, Id=<guid>, Duration=<ms>ms)
+```
+
+If you see `Executed ... (Succeeded)` the function ran cleanly. If you see a `403 Forbidden` in the logs, the Monitoring Metrics Publisher role on the DCR has not propagated yet — wait 5–10 minutes and retry.
 
 #### Query Sentinel Logs
 
@@ -508,10 +528,31 @@ The Function App runs automatically on a timer every 10 minutes.
 **Check the function loaded:**
 Function App → **Functions** — you should see `AzureFunctionFunctionApp` listed.
 
-**Manually trigger the function (optional):**
-1. Function App → **Functions** → `AzureFunctionFunctionApp`
-2. Click **Test/Run → Run**
-3. Watch the **Logs** tab — look for `Successfully ingested N event(s)`
+**Manually test the function via Code + Test:**
+
+Before triggering, enable CORS so the portal's live log stream can connect:
+
+1. In your **Function App**, go to **Settings → CORS**
+2. Add `https://portal.azure.com` to the allowed origins list and click **Save**
+
+Then trigger the function:
+
+1. Function App main page → **Functions** → click `AzureFunctionFunctionApp`
+2. Click **Code + Test** in the left menu
+3. Click **Test/Run** in the toolbar
+4. At the bottom of the panel, wait for the live log stream to report **Connected** — this uses Application Insights and may take 10–20 seconds
+5. Leave **HTTP method** as `POST` and **Selected key** as `_master` (the default host key)
+6. Click **Run**
+
+You should receive **HTTP 202 Accepted** in the Output pane. The live log stream at the bottom should show:
+
+```
+[Information]   FunctionAppSample main: Successfully ingested 3 event(s) into stream 'Custom-ISVSecurity_CL'.
+[Information]   FunctionAppSample main: Connector finished at <timestamp>Z
+[Information]   Executed 'Functions.AzureFunctionFunctionApp' (Succeeded, Id=<guid>, Duration=<ms>ms)
+```
+
+If you see `Executed ... (Succeeded)` the function ran cleanly. If you see `403 Forbidden` in the logs, the Monitoring Metrics Publisher role on the DCR has not propagated — wait 5–10 minutes and retry.
 
 **Query Sentinel Logs** (note the new table name):
 
@@ -521,7 +562,7 @@ ISVSecurity_CL
 | take 10
 ```
 
-Confirm the `UserName` and `RiskScore` columns are populated with data from your updated `main.py`. Allow **5–10 minutes** for ingestion lag after the function runs.
+Confirm the `UserName` and `RiskScore` columns are populated with values from your updated `main.py`. Allow **5–10 minutes** for ingestion lag after the function runs.
 
 > **Note on existing deployments:** If you previously deployed with the old `FunctionAppSample_CL` table, it will persist alongside the new table but stop receiving data. You can delete it via **Log Analytics workspace → Tables**.
 
