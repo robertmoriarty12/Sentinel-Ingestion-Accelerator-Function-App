@@ -51,6 +51,12 @@
             "metadata": {
                 "description": "Azure region for the Function App and related resources (Function App, plan, storage, App Insights, DCE, DCR). Can differ from the Resource Group location."
             }
+        },
+        "DeployerObjectId": {
+            "type": "string",
+            "metadata": {
+                "description": "Object ID of the user or service principal running this deployment. Required to grant Key Vault Secrets Officer access so the deployment can store the Client Secret. Find it in Azure Portal > Azure Active Directory > Users > your user > Object ID."
+            }
         }
     },
     "variables": {
@@ -301,14 +307,27 @@
                 {
                     "type": "Microsoft.Authorization/roleAssignments",
                     "apiVersion": "2022-04-01",
-                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e6')]",
+                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), variables('FunctionName'), '4633458b-17de-408a-b874-0445c86b69e0')]",
                     "dependsOn": [
                         "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]"
                     ],
                     "properties": {
-                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e0')]",
                         "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('FunctionName')), '2022-03-01', 'full').identity.principalId]",
                         "principalType": "ServicePrincipal"
+                    }
+                },
+                {
+                    "type": "Microsoft.Authorization/roleAssignments",
+                    "apiVersion": "2022-04-01",
+                    "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName')), parameters('DeployerObjectId'), 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultName'))]"
+                    ],
+                    "properties": {
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                        "principalId": "[parameters('DeployerObjectId')]",
+                        "principalType": "User"
                     }
                 }
             ]
