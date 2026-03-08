@@ -41,23 +41,17 @@ Follow these steps to deploy the accelerator exactly as-is to verify the full in
 
 ---
 
-### Step 1 – Clone the Repositories
+### Step 1 – Clone the Accelerator
 
-You need both the Azure Sentinel repository (for the packaging toolchain) and this accelerator.
+For Scenario 1 you only need the accelerator — the pre-built `Package/mainTemplate.json` is included, so there is no need to clone Azure-Sentinel or run the packaging tool.
 
 ```powershell
-git clone https://github.com/Azure/Azure-Sentinel.git
 git clone https://github.com/robertmoriarty12/Sentinel-Ingestion-Accelerator-Function-App.git
 ```
 
-Copy the accelerator solution folder into the Azure Sentinel solutions directory:
+All files referenced in the remaining steps are under `Sentinel-Ingestion-Accelerator-Function-App\FunctionApp\`.
 
-```powershell
-Copy-Item "Sentinel-Ingestion-Accelerator-Function-App\FunctionApp" `
-          "Azure-Sentinel\Solutions\FunctionApp" -Recurse -Force
-```
-
-> **Note:** This copy step places your solution where the Sentinel packaging tools expect it. If you are submitting a PR to the official Azure Sentinel repository, this is where your solution folder will live permanently.
+> **Cloning Azure-Sentinel is only needed in Scenario 2** (customization), where you fork Azure-Sentinel, make changes, and re-run the packaging tool.
 
 ---
 
@@ -104,7 +98,7 @@ This step installs the **"Function App Sample"** connector card into your Sentin
 ```powershell
 az deployment group create `
   --resource-group <your-sentinel-rg> `
-  --template-file "Azure-Sentinel\Solutions\FunctionApp\Package\mainTemplate.json" `
+  --template-file "Sentinel-Ingestion-Accelerator-Function-App\FunctionApp\Package\mainTemplate.json" `
   --parameters workspace="<your-workspace-name>" "workspace-location"="centralus"
 ```
 
@@ -284,10 +278,10 @@ Open `Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json`.
 
 The table schema (`Microsoft.OperationalInsights/workspaces/tables`) and the DCR stream declaration (`streamDeclarations`) must always be kept in sync — if they differ, ingestion will fail with a schema mismatch error.
 
-**3c – Update `WEBSITE_RUN_FROM_PACKAGE`** to point to your fork (see Step 6):
+**3c – Update `WEBSITE_RUN_FROM_PACKAGE`** to point to your fork and feature branch. Use the branch name while you are in development — change it to `main` only when you are ready to merge:
 
 ```json
-"WEBSITE_RUN_FROM_PACKAGE": "https://raw.githubusercontent.com/<your-github-username>/Azure-Sentinel/main/Solutions/FunctionApp/Data%20Connectors/FunctionAppSample.zip"
+"WEBSITE_RUN_FROM_PACKAGE": "https://raw.githubusercontent.com/<your-github-username>/Azure-Sentinel/<your-branch>/Solutions/FunctionApp/Data%20Connectors/FunctionAppSample.zip"
 ```
 
 ---
@@ -301,6 +295,12 @@ Open `Data Connectors/FunctionApp_API_FunctionApp.json`.
 
 ```
 https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2Fmain%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json
+```
+
+Update the **Deploy to Azure button URL** to reference your fork and feature branch:
+
+```
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2F<your-branch>%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json
 ```
 
 Use PowerShell to do the table name rename in bulk rather than find-and-replace manually:
@@ -386,9 +386,14 @@ The tool will update `Package/mainTemplate.json` and `Package/3.0.0.zip`. The AR
 
 ---
 
-### Step 8 – Commit and Push to Your Fork
+### Step 8 – Commit and Push to a Feature Branch on Your Fork
+
+Do not push directly to `main`. Work on a feature branch — this keeps your changes reviewable and ensures the raw URL in `WEBSITE_RUN_FROM_PACKAGE` is stable and publicly accessible during development.
 
 ```powershell
+# Create and switch to a feature branch
+git checkout -b feature/isv-security-connector
+
 git add "Solutions/FunctionApp/Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json"
 git add "Solutions/FunctionApp/Data Connectors/FunctionApp_API_FunctionApp.json"
 git add "Solutions/FunctionApp/Data Connectors/AzureFunctionFunctionApp/main.py"
@@ -396,10 +401,16 @@ git add "Solutions/FunctionApp/Data Connectors/FunctionAppSample.zip"
 git add "Solutions/FunctionApp/Package/mainTemplate.json"
 git add "Solutions/FunctionApp/Package/3.0.0.zip"
 git commit -m "ISV: rename table to ISVSecurity_CL, add UserName+RiskScore schema fields"
-git push origin main
+git push fork feature/isv-security-connector
 ```
 
-Once pushed, the raw URL for your zip is live and `WEBSITE_RUN_FROM_PACKAGE` will resolve correctly when someone deploys the Function App.
+Once pushed, the raw URLs for your zip and ARM template are live at:
+
+```
+https://raw.githubusercontent.com/<your-github-username>/Azure-Sentinel/feature/isv-security-connector/Solutions/FunctionApp/Data%20Connectors/FunctionAppSample.zip
+```
+
+> **When ready to submit to the Sentinel marketplace:** merge your branch to `main` on your fork, update `WEBSITE_RUN_FROM_PACKAGE` and the Deploy-to-Azure button URL to use `main` instead of the branch name, re-run the packager, re-push, then open a PR from your fork's `main` against `Azure/Azure-Sentinel:main`.
 
 ---
 
