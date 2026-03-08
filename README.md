@@ -291,13 +291,7 @@ The table schema (`Microsoft.OperationalInsights/workspaces/tables`) and the DCR
 Open `Data Connectors/FunctionApp_API_FunctionApp.json`.
 
 - Replace every occurrence of the old table name (`FunctionAppSample_CL`) with your new name (`ISVSecurity_CL`) — this covers `graphQueries`, `sampleQueries`, `dataTypes`, `connectivityCriterias`, and the NOTE description text
-- Update the **Deploy to Azure button URL** to point to the `azuredeploy` ARM template in your fork:
-
-```
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2Fmain%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json
-```
-
-Update the **Deploy to Azure button URL** to reference your fork and feature branch:
+- Update the **Deploy to Azure button URL** in `FunctionApp_API_FunctionApp.json` to point to your fork and feature branch:
 
 ```
 https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2F<your-branch>%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json
@@ -414,14 +408,122 @@ https://raw.githubusercontent.com/<your-github-username>/Azure-Sentinel/feature/
 
 ---
 
-### Step 9 – Re-deploy the Connector Card, Then Re-deploy the Function App
+### Step 9 – Deploy Your Customized Connector
 
-Your schema changes require re-deploying both ARM templates:
+Your schema changes require re-deploying both ARM templates in sequence.
 
-1. **Re-deploy `mainTemplate.json`** to your Sentinel workspace (same as Scenario 1 Step 3) — this updates the connector card with your new table name and KQL queries
-2. **Open the updated connector in Data Connectors → Open connector page → STEP 2 → Deploy to Azure** — the Deploy to Azure button now points to your fork, which has the updated ARM template
+---
 
-> **Note on existing deployments:** If you previously deployed with the old table name, Azure will create the new table alongside the old one. The old `FunctionAppSample_CL` table will persist but stop receiving data. You can delete it via the Log Analytics workspace → Tables blade.
+#### 9a – Re-deploy the Connector Card (mainTemplate.json)
+
+This updates the connector card in Sentinel with your new table name and KQL queries.
+
+**Option A – Azure Portal**
+
+1. In the Azure Portal, search for **"Deploy a custom template"** and select it
+2. Click **Build your own template in the editor**
+3. Paste the contents of your updated `Solutions/FunctionApp/Package/mainTemplate.json` and click **Save**
+4. Fill in the parameters:
+
+| Parameter | Value |
+|---|---|
+| `workspace` | Your Log Analytics workspace name |
+| `workspace-location` | Azure region of your workspace (e.g. `centralus`) |
+
+5. Deploy to the **same resource group** as your Sentinel workspace
+
+**Option B – Azure CLI**
+
+```powershell
+az deployment group create `
+  --resource-group <your-sentinel-rg> `
+  --template-file "Azure-Sentinel\Solutions\FunctionApp\Package\mainTemplate.json" `
+  --parameters workspace="<your-workspace-name>" "workspace-location"="centralus"
+```
+
+**Verify:** Go to **Microsoft Sentinel → Data Connectors** and search for your connector by name. The card should appear within 1–2 minutes and its sample KQL queries should now reference your new table name.
+
+---
+
+#### 9b – App Registration
+
+If you already completed Scenario 1, reuse the same App Registration — you need the same three values:
+
+| Value | ARM parameter |
+|---|---|
+| Directory (tenant) ID | `TenantId` |
+| Application (client) ID | `ClientId` |
+| Client secret value | `ClientSecret` |
+
+If you are starting fresh (no Scenario 1 baseline), follow **Scenario 1 Step 4** to create a new App Registration.
+
+---
+
+#### 9c – Assign Key Vault Secrets Officer (if not already done)
+
+If you are deploying into the same resource group as a previous Scenario 1 deployment and already hold the role, skip this step.
+
+Otherwise, follow **Scenario 1 Step 5** to assign **Key Vault Secrets Officer** to the deploying user on the target resource group before proceeding.
+
+---
+
+#### 9d – Deploy the Function App via the Connector Card
+
+1. In **Microsoft Sentinel → Data Connectors**, find your connector and click **Open connector page**
+2. Under **STEP 2 – Deploy the Azure Function App**, click **Deploy to Azure**
+   - The button now points to `azuredeploy_FunctionApp_API_FunctionApp.json` on your fork's feature branch — verify the URL in your browser's address bar before filling in parameters
+3. Fill in the parameters:
+
+| Parameter | Description |
+|---|---|
+| `WorkspaceName` | Log Analytics workspace name |
+| `TenantId` | Tenant ID from Step 9b |
+| `ClientId` | Client ID from Step 9b |
+| `ClientSecret` | Client secret value from Step 9b |
+| `AppInsightsWorkspaceResourceID` | Full Resource ID of your Log Analytics workspace (workspace → Properties → Resource ID) |
+| `FunctionAppLocation` | Azure region (e.g. `centralus`). Can differ from the resource group location. |
+
+4. Click **Review + create** and wait for deployment to complete (~3–5 minutes)
+
+---
+
+#### 9e – Assign Monitoring Metrics Publisher on the Data Collection Rule
+
+After the Function App deployment completes, grant your App Registration permission to ingest data.
+
+1. In the Azure Portal, navigate to the **Data Collection Rule** created by the deployment (find it by name in the resource group used in Step 9d)
+2. Go to **Access control (IAM) → Add role assignment**
+3. Select **Monitoring Metrics Publisher**
+4. Under **Members**, choose **User, group, or service principal** and select your App Registration from Step 9b
+5. Click **Review + assign**
+
+> **Critical:** This role must be assigned **directly on the Data Collection Rule resource** — assigning it at the resource group or subscription scope will **not work** and causes a `403 Forbidden` error when the Function App attempts to ingest data. Wait **5–10 minutes** for RBAC propagation before testing.
+
+---
+
+#### 9f – Verify Data Ingestion
+
+The Function App runs automatically on a timer every 10 minutes.
+
+**Check the function loaded:**
+Function App → **Functions** — you should see `AzureFunctionFunctionApp` listed.
+
+**Manually trigger the function (optional):**
+1. Function App → **Functions** → `AzureFunctionFunctionApp`
+2. Click **Test/Run → Run**
+3. Watch the **Logs** tab — look for `Successfully ingested N event(s)`
+
+**Query Sentinel Logs** (note the new table name):
+
+```kql
+ISVSecurity_CL
+| sort by TimeGenerated desc
+| take 10
+```
+
+Confirm the `UserName` and `RiskScore` columns are populated with data from your updated `main.py`. Allow **5–10 minutes** for ingestion lag after the function runs.
+
+> **Note on existing deployments:** If you previously deployed with the old `FunctionAppSample_CL` table, it will persist alongside the new table but stop receiving data. You can delete it via **Log Analytics workspace → Tables**.
 
 ---
 
