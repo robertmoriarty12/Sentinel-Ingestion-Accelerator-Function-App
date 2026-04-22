@@ -73,6 +73,8 @@ Note the following — you will need them later:
 
 > **Region tip:** Deploy all resources to the same region. If you hit `SubscriptionIsOverQuotaForSku` errors in East US, try **Central US**.
 
+> **Why there is no explicit hosting plan in the ARM template:** The Function App ARM template intentionally omits the `Microsoft.Web/serverfarms` resource. Explicitly declaring a Linux Consumption (Y1/Dynamic) plan causes ARM to validate the SKU against regional capacity, which fails in high-demand regions like East US with a quota error — even though Consumption capacity is available there. By omitting the serverfarm resource entirely, Azure assigns the Function App to the Consumption tier implicitly without triggering that SKU-level quota check, making the template deployable to any Azure region. This matches the pattern used by the majority of Microsoft Sentinel solutions in the official repository.
+
 ---
 
 ### Step 3 – Deploy the Connector (mainTemplate.json)
