@@ -11,7 +11,7 @@ The accelerator follows the **standard two-ARM-template pattern** used by all Mi
 | Deployment | What it does | Template |
 |---|---|---|
 | **1 – Connector card** | Installs your connector UI into Sentinel Data Connectors | `FunctionApp/Package/mainTemplate.json` |
-| **2 – Function App** | Deploys the Function App, DCE, DCR, Key Vault, and custom log table | `FunctionApp/Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json` |
+| **2 – Function App** | Deploys the Function App, DCE, DCR, Key Vault, and custom log table | `FunctionApp/Data Connectors/azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json` |
 
 ```
 Log Analytics Workspace + Microsoft Sentinel
@@ -72,6 +72,8 @@ Note the following — you will need them later:
 | **Region** | Log Analytics workspace → Overview |
 
 > **Region tip:** Deploy all resources to the same region. If you hit `SubscriptionIsOverQuotaForSku` errors in East US, try **Central US**.
+
+> **Why there is no explicit hosting plan in the ARM template:** The Function App ARM template intentionally omits the `Microsoft.Web/serverfarms` resource. Explicitly declaring a Linux Consumption (Y1/Dynamic) plan causes ARM to validate the SKU against regional capacity, which fails in high-demand regions like East US with a quota error — even though Consumption capacity is available there. By omitting the serverfarm resource entirely, Azure assigns the Function App to the Consumption tier implicitly without triggering that SKU-level quota check, making the template deployable to any Azure region. This matches the pattern used by the majority of Microsoft Sentinel solutions in the official repository.
 
 ---
 
@@ -270,7 +272,7 @@ When you rename the table or add schema fields, these files must all be kept in 
 
 | File | What to change |
 |---|---|
-| `Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json` | `tableName` variable, `streamName` variable, table column list, DCR stream declaration column list |
+| `Data Connectors/azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json` | `tableName` variable, `streamName` variable, table column list, DCR stream declaration column list |
 | `Data Connectors/FunctionApp_API_FunctionApp.json` | All KQL query references to the old table name; connector note text mentioning the table name |
 | `Data Connectors/AzureFunctionFunctionApp/main.py` | Sample event payload — add new fields so test data matches the schema |
 | `Data Connectors/FunctionAppSample.zip` | Rebuilt from `main.py` and all dependencies (see Step 4) |
@@ -280,7 +282,7 @@ When you rename the table or add schema fields, these files must all be kept in 
 
 ### Step 3 – Update the ARM Template
 
-Open `Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json`.
+Open `Data Connectors/azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json`.
 
 **3a – Rename the table and stream** (in the `variables` block):
 
@@ -314,7 +316,7 @@ Open `Data Connectors/FunctionApp_API_FunctionApp.json`.
 - Update the **Deploy to Azure button URL** in `FunctionApp_API_FunctionApp.json` to point to your fork and feature branch:
 
 ```
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2F<your-branch>%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_FunctionApp_API_FunctionApp.json
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<your-github-username>%2FAzure-Sentinel%2F<your-branch>%2FSolutions%2FFunctionApp%2FData%2520Connectors%2Fazuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json
 ```
 
 Use PowerShell to do the table name rename in bulk rather than find-and-replace manually:
@@ -408,7 +410,7 @@ Do not push directly to `main`. Work on a feature branch — this keeps your cha
 # Create and switch to a feature branch
 git checkout -b feature/isv-security-connector
 
-git add "Solutions/FunctionApp/Data Connectors/azuredeploy_FunctionApp_API_FunctionApp.json"
+git add "Solutions/FunctionApp/Data Connectors/azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json"
 git add "Solutions/FunctionApp/Data Connectors/FunctionApp_API_FunctionApp.json"
 git add "Solutions/FunctionApp/Data Connectors/AzureFunctionFunctionApp/main.py"
 git add "Solutions/FunctionApp/Data Connectors/FunctionAppSample.zip"
@@ -491,7 +493,7 @@ Otherwise, follow **Scenario 1 Step 5** to assign **Key Vault Secrets Officer** 
 
 1. In **Microsoft Sentinel → Data Connectors**, find your connector and click **Open connector page**
 2. Under **STEP 2 – Deploy the Azure Function App**, click **Deploy to Azure**
-   - The button now points to `azuredeploy_FunctionApp_API_FunctionApp.json` on your fork's feature branch — verify the URL in your browser's address bar before filling in parameters
+   - The button now points to `azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json` on your fork's feature branch — verify the URL in your browser's address bar before filling in parameters
 3. Fill in the parameters:
 
 | Parameter | Description |
@@ -590,7 +592,7 @@ FunctionApp/
 │   └── Solution_FunctionApp.json          # Solution metadata for Sentinel packaging tool
 ├── Data Connectors/
 │   ├── FunctionApp_API_FunctionApp.json   # Connector UI definition (source — edit this)
-│   ├── azuredeploy_FunctionApp_API_FunctionApp.json  # Function App ARM template
+│   ├── azuredeploy_Connector_FunctionApp_FunctionApp_AzureFunction.json  # Function App ARM template
 │   ├── AzureFunctionFunctionApp/
 │   │   ├── main.py                        # Python function — replace with your API logic
 │   │   └── function.json                  # Timer trigger config (every 10 min)
